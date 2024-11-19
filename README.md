@@ -15,7 +15,15 @@ This is a program to simulate our ships for our Research Project: `Applying swar
 ## How to run
 
 1. Clone the repository
-2. Run:
+2. Build the box2d library
+
+    ```bash
+    cd box2d
+    sh build.sh
+    cd ..
+    ```
+
+3. Run:
 
     ```bash
     make
@@ -26,4 +34,4 @@ This is a program to simulate our ships for our Research Project: `Applying swar
     make rerun
     ```
 
-3. Enjoy!
+4. Enjoy!
