@@ -1,0 +1,1 @@
+nodemon --exec "make rerun" --ext c,cpp,h

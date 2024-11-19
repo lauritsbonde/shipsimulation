@@ -1,0 +1,7 @@
+{
+	"files.associations": {
+		"render.h": "c",
+		"stdio.h": "c",
+		"__node_handle": "c"
+	}
+}
