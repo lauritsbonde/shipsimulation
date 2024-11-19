@@ -1,25 +1,49 @@
 #include "render.h"
 #include "definitions.h"
 
+void render_ship(SDL_Renderer *renderer, b2Vec2 position, b2Rot rotation, b2Vec2* points, Color color) {
+    // Calculate screen center position, flipping the y-axis
+    float centerX = position.x * SCALE + WINDOW_WIDTH / 2;
+    float centerY = WINDOW_HEIGHT / 2 - position.y * SCALE;
+
+    // Transform and rotate the ship's points
+    SDL_FPoint transformedPoints[NUMBER_OF_POINTS]; // Include closing point for loop
+    for (int i = 0; i < NUMBER_OF_POINTS-1; i++) {
+        // Local coordinates of the ship point
+        float localX = points[i].x * SCALE;
+        float localY = points[i].y * SCALE;
+
+        // Rotate around the center of the ship
+        float rotatedX = localX*2 * rotation.c - localY*2 * rotation.s;
+        float rotatedY = localX*2 * rotation.s + localY*2 * rotation.c;
+
+        // Translate to screen coordinates
+        transformedPoints[i].x = centerX + rotatedX;
+        transformedPoints[i].y = centerY - rotatedY; // Flip y-axis
+    }
+
+    // Close the polygon loop
+    transformedPoints[NUMBER_OF_POINTS-1] = transformedPoints[0];
+
+    // Set draw color for the ship
+    SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
+
+    // Draw the ship polygon
+    SDL_RenderDrawLinesF(renderer, transformedPoints, NUMBER_OF_POINTS);
+}
+
+
 void render_target(Ship ship, SDL_Renderer* renderer){
     Color color = ship.color;
     color.a = 100;
-    render_box(renderer, ship.target, (b2Rot){1.0f, 0.0f}, ship.width, ship.height, color);
+    render_ship(renderer, ship.target, ship.targetOrientation, ship.points, color);
 }
 
 void renderShips(int numberOfShips, Ship* ships, SDL_Renderer* renderer) {
     for (int i = 0; i < numberOfShips; i++) {
-        // Get the position and rotation of each ship's body
         b2Vec2 position = b2Body_GetPosition(ships[i].bodyId);
         b2Rot rotation = b2Body_GetRotation(ships[i].bodyId);
-
-        // Assuming all ships have the same dimensions
-        float halfWidth = ships[i].width;
-        float halfHeight = ships[i].height;
-
-        // Render the ship
-        Color shipColor = ships[i].color;
-        render_box(renderer, position, rotation, halfWidth, halfHeight, shipColor);
+        render_ship(renderer, position, rotation, ships[i].points, ships[i].color);
         render_target(ships[i], renderer);
     }
 }

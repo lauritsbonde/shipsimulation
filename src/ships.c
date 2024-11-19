@@ -1,7 +1,21 @@
 #include "ships.h"
 
+// Ships are shaped like elongated diamonds
+b2Vec2 shipPoints[] = {
+    {0.0f, 1.0f},   // Top point (elongated)
+    {0.5f, 0.3f},   // Top-right corner
+    {0.5f, -0.3f},  // Bottom-right corner
+    {0.0f, -1.0f},  // Bottom point (elongated)
+    {-0.5f, -0.3f}, // Bottom-left corner
+    {-0.5f, 0.3f},  // Top-left corner
+    {0.0f, 1.0f}    // Close the loop
+};
+
 Ship createShip(b2WorldId worldId, b2Vec2 position, b2Vec2 target) {
     Ship ship;
+
+    // Copy the ship points to the ship struct
+    memcpy(ship.points, shipPoints, sizeof(shipPoints));
 
     // Define the dynamic body for the ship
     b2BodyDef bodyDef = b2DefaultBodyDef();
@@ -9,10 +23,14 @@ Ship createShip(b2WorldId worldId, b2Vec2 position, b2Vec2 target) {
     bodyDef.position = position;
     ship.bodyId = b2CreateBody(worldId, &bodyDef);
 
+    // define the hull of the ship
+    b2Hull hull = b2ComputeHull(shipPoints, NUMBER_OF_POINTS);
+    float radius = 0.5f; // dont know what this is
+
     // Define box shape
     ship.width = .5f;
     ship.height = .5f;
-    b2Polygon dynamicBox = b2MakeBox(ship.width, ship.height);
+    b2Polygon dynamicBox = b2MakePolygon(&hull, radius);
 
     // Define shape properties
     b2ShapeDef shapeDef = b2DefaultShapeDef();
@@ -32,6 +50,7 @@ Ship createShip(b2WorldId worldId, b2Vec2 position, b2Vec2 target) {
     ship.color = (Color){rand() % 255, rand() % 255, rand() % 255, 255};
 
     ship.target = target;
+    ship.targetOrientation = (b2Rot){1.0f, 0.0f};
 
     return ship;
 }
@@ -63,6 +82,13 @@ b2Vec2 scale(b2Vec2 v, float scalar) {
     b2Vec2 result;
     result.x = v.x * scalar;
     result.y = v.y * scalar;
+    return result;
+}
+
+b2Vec2 add(b2Vec2 a, b2Vec2 b) {
+    b2Vec2 result;
+    result.x = a.x + b.x;
+    result.y = a.y + b.y;
     return result;
 }
 
@@ -107,13 +133,6 @@ void moveShipsToTarget(int numberOfShips, Ship* ships) {
             b2Body_SetLinearVelocity(bodyId, (b2Vec2){0.0f, 0.0f});
         }
     }
-}
-
-b2Vec2 add(b2Vec2 a, b2Vec2 b) {
-    b2Vec2 result;
-    result.x = a.x + b.x;
-    result.y = a.y + b.y;
-    return result;
 }
 
 void moveShipsToTargetPID(int numberOfShips, Ship* ships, b2Vec2 target) {

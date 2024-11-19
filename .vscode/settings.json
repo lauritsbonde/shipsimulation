@@ -2,6 +2,7 @@
 	"files.associations": {
 		"render.h": "c",
 		"stdio.h": "c",
-		"__node_handle": "c"
+		"__node_handle": "c",
+		"definitions.h": "c"
 	}
 }

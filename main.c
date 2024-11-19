@@ -9,6 +9,7 @@
 const int WINDOW_WIDTH = 1920;
 const int WINDOW_HEIGHT = 1080;
 const float SCALE = 20.0f; 
+const int NUMBER_OF_POINTS = 7;
 
 const float HALF_BOX_WIDTH = 35.0f;
 const float HALF_BOX_HEIGHT = 25.0f;
