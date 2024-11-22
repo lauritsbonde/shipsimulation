@@ -8,7 +8,6 @@
 
 #include "definitions.h"
 
-Ship createShip(b2WorldId worldId, b2Vec2 position, b2Vec2 target);
 void createShips(b2WorldId worldId, int numberOfShips, Ship* ships);
 void moveShipsToTarget(int numberOfShips, Ship* ships);
 

@@ -3,6 +3,9 @@
 		"render.h": "c",
 		"stdio.h": "c",
 		"__node_handle": "c",
-		"definitions.h": "c"
+		"definitions.h": "c",
+		"formationcalculator.h": "c",
+		"ships.h": "c",
+		"stdlib.h": "c"
 	}
 }

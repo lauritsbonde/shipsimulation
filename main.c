@@ -5,16 +5,7 @@
 #include "src/definitions.h"
 #include "src/render.h"
 #include "src/ships.h"
-
-const int WINDOW_WIDTH = 1920;
-const int WINDOW_HEIGHT = 1080;
-const float SCALE = 20.0f; 
-const int NUMBER_OF_POINTS = 7;
-
-const float HALF_BOX_WIDTH = 35.0f;
-const float HALF_BOX_HEIGHT = 25.0f;
-
-int numberOfShips = 5;
+#include "src/formationCalculator.h"
 
 void createBoundary(b2WorldId worldId, float halfWidth, float halfHeight) {
     // Define common properties for wall shapes
@@ -82,6 +73,15 @@ int main() {
     // Create dynamic body
     Ship ships[numberOfShips];  // Array to store multiple ships
     createShips(worldId, numberOfShips, ships);
+
+    // calculate the formation
+    Formation* formation = createFormation(numberOfShips);
+    Shape* shape = createShape(shipPoints, NUMBER_OF_POINTS);
+    calculateFormation(formation, shape);
+
+    for (int i = 0; i < numberOfShips; i++) {
+        ships[i].target = formation->targets[i];
+    }
 
     // Simulation parameters
     float timeStep = 1.0f / 60.0f;
