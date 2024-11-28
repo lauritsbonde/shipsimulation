@@ -14,8 +14,8 @@ void render_ship(SDL_Renderer *renderer, b2Vec2 position, b2Rot rotation, b2Vec2
         float localY = points[i].y * SCALE;
 
         // Rotate around the center of the ship
-        float rotatedX = localX*2 * rotation.c - localY*2 * rotation.s;
-        float rotatedY = localX*2 * rotation.s + localY*2 * rotation.c;
+        float rotatedX = localX * rotation.c - localY * rotation.s;
+        float rotatedY = localX * rotation.s + localY * rotation.c;
 
         // Translate to screen coordinates
         transformedPoints[i].x = centerX + rotatedX;
@@ -43,7 +43,7 @@ void renderShips(int numberOfShips, Ship* ships, SDL_Renderer* renderer) {
     for (int i = 0; i < numberOfShips; i++) {
         b2Vec2 position = b2Body_GetPosition(ships[i].bodyId);
         b2Rot rotation = b2Body_GetRotation(ships[i].bodyId);
-        render_ship(renderer, position, rotation, ships[i].points, ships[i].color);
+        // render_ship(renderer, position, rotation, ships[i].points, ships[i].color);
         render_target(ships[i], renderer);
     }
 }

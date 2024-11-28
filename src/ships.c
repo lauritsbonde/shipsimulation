@@ -18,7 +18,7 @@ Ship createShip(b2WorldId worldId, b2Vec2 position) {
     // Define the polygon shape with a small radius for smooth edges
     ship.width = 1.0f;  // Full width of the ship
     ship.height = 2.0f; // Full height of the ship
-    float radius = 0.1f; // Small rounding radius for corners
+    float radius = 0.0f; // Small rounding radius for corners
     b2Polygon dynamicBox = b2MakePolygon(&hull, radius);
 
     // Define shape properties
@@ -107,11 +107,13 @@ void moveShipsToTarget(int numberOfShips, Ship* ships) {
         float baseForce = 10.0f; // Adjust for forward thrust
         float turnAdjustment = angleToTarget * 5.0f; // Proportional turning
 
+        // make the ship only sail forwards
+
         float leftForce = baseForce - turnAdjustment;
         float rightForce = baseForce + turnAdjustment;
 
-        b2Vec2 leftForceVector = scale(targetVector, ship->leftMotorForce);
-        b2Vec2 rightForceVector = scale(targetVector, ship->rightMotorForce);
+        b2Vec2 leftForceVector = scale((targetVector), ship->leftMotorForce);
+        b2Vec2 rightForceVector = scale((targetVector), ship->rightMotorForce);
 
 
         // Calculate motor positions in world space

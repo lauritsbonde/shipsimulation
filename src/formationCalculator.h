@@ -4,6 +4,7 @@
 #include <box2d/box2d.h>
 #include <math.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "definitions.h"
 

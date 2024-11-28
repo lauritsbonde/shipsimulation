@@ -32,26 +32,43 @@ Formation* createFormation(int numberOfShips) {
     return formation;
 }
 
-// This function returns the target positions for each ship in a formation starting of as a pyramid to a certain point and then a line
-#include <math.h>
-#include <stdlib.h>
+// This function calculates the maximum level of a pyramid given the number of ships
+int calculateLevel(int numberOfShips) {
+    return (int)((-1 + sqrt(1 + 8 * numberOfShips)) / 2);
+}
+
+// This function calculates the number of blocks needed to build a pyramid of a given level
+int calculateBlocksNeeded(int level) {
+    return level * (level + 1) / 2;
+}
 
 // This function calculates the target positions for each ship in a pyramid-to-line formation
 void calculateFormation(Formation* outFormation, Shape* shape) {
     int totalShips = outFormation->numberOfShips;
 
     int currentShip = 0;
-    int level = 0;
-    float spacing = 2.3f; // Spacing between ships
+    int pyramidLevel = 0;
+    float spacing = 1.25f; // Spacing between ships
     float lastLevelWidth = 0.0f; // Width of the last pyramid level
+    int lastLevelBlockWidth = 0;
+
+    // The number of ships in a pyramid shape is the logarithm base 2 of the total number of ships
+    int pyramidShips = log2(totalShips);
+    // Calculate the blocks needed for the pyramid
+    int maxBlocks = calculateBlocksNeeded(pyramidShips);
+
 
     // Calculate pyramid formation
     while (currentShip < totalShips) {
-        level++;
-        int shipsInLevel = level;
+        int shipsInLevel = pyramidLevel + 1;
+
+        if(currentShip > maxBlocks){
+            break;
+        }
 
         // Determine if the remaining ships fit in this level
-        if (currentShip + shipsInLevel > totalShips) {
+        if (currentShip > totalShips) {
+            printf("currentShip: %d - totalShips: %d\n", currentShip, totalShips);
             break; // Stop pyramid and transition to a line
         }
 
@@ -60,22 +77,39 @@ void calculateFormation(Formation* outFormation, Shape* shape) {
 
         for (int i = 0; i < shipsInLevel; i++) {
             outFormation->targets[currentShip].x = xOffset + i * spacing;
-            outFormation->targets[currentShip].y = -level * spacing; // Negative y-axis for downward pyramid
+            outFormation->targets[currentShip].y = -pyramidLevel * spacing; // Negative y-axis for downward pyramid
             currentShip++;
         }
 
         // Update the width of the last level
         lastLevelWidth = (shipsInLevel - 1) * spacing;
+        lastLevelBlockWidth = shipsInLevel;
+        pyramidLevel++;
     }
 
     // Calculate the starting x-coordinate for the line
-    float lineStartX = 2.0f * lastLevelWidth;
+    float lineStartX = lastLevelWidth * -0.5f;
 
-    // Transition to line formation
-    for (; currentShip < totalShips; currentShip++) {
-        int lineShipIndex = currentShip - (level * (level + 1)) / 2; // Index in line
-        outFormation->targets[currentShip].x = lineStartX + lineShipIndex * spacing;
-        outFormation->targets[currentShip].y = -(level) * spacing; // Line continues below the pyramid
+    int rowLevel = pyramidLevel;
+
+    // create the rows that follows the pyramid formatiuon, the width should be the same as the last level of the pyramid
+    while (currentShip < totalShips) {
+        int shipsInLevel = lastLevelBlockWidth;
+
+        if((rowLevel - pyramidLevel) % 2 == 0){
+            shipsInLevel--;
+        }
+
+        printf("row-pyramidLevel: %d\n", rowLevel - pyramidLevel);
+        
+        for(int i = 0; i < shipsInLevel && currentShip < totalShips; i++){
+            float xShift = shipsInLevel < lastLevelBlockWidth ? 0.6f : 0;
+            printf("xShift: %f\n", xShift);
+            outFormation->targets[currentShip].x = (lineStartX + xShift) + i * spacing;
+            outFormation->targets[currentShip].y = -rowLevel * spacing;
+            currentShip++;
+        }
+        rowLevel++;
     }
 }
 
