@@ -34,15 +34,20 @@ Ship createShip(b2WorldId worldId, b2Vec2 position) {
     ship.leftMotorForce = 1.0f;
     ship.rightMotorForce = 1.0f;
 
-    // Set motor positions symmetrically
-    ship.leftMotorPosition = (b2Vec2){-ship.width / 2.0f, 0.0f};  // Mid-left edge
-    ship.rightMotorPosition = (b2Vec2){ship.width / 2.0f, 0.0f}; // Mid-right edge
 
     // Generate random colors for each ship
     ship.color = (Color){rand() % 255, rand() % 255, rand() % 255, 255};
 
+    b2Rot intialOrientation = {0.0f, 1.0f}; // Set the initial orientation as needed
+
+    b2Body_SetTransform(ship.bodyId, position, intialOrientation);
+
+    // Set motor positions symmetrically, one on each side of the ship
+    ship.leftMotorPosition = rotate((b2Vec2){ 0.50f, 0.0f}, intialOrientation);
+    ship.rightMotorPosition = rotate((b2Vec2){ -0.50f, 0.0f}, intialOrientation);
+
     // Set target and target orientation
-    ship.targetOrientation = (b2Rot){1.0f, 0.0f};
+    ship.targetOrientation = (b2Rot){0.0f, 1.0f};
 
     return ship;
 }
@@ -77,7 +82,7 @@ b2Vec2 calculateVectorToTarget(Ship* ship) {
         .y = targetPosition.y - currentPosition.y
     };
 
-    // Optional: Normalize the vector if you want the direction only
+    // Normalize the vector to get the direction only
     float length = sqrtf(vectorToTarget.x * vectorToTarget.x + vectorToTarget.y * vectorToTarget.y);
     if (length > 0.0f) {
         vectorToTarget.x /= length;
@@ -87,108 +92,77 @@ b2Vec2 calculateVectorToTarget(Ship* ship) {
     return vectorToTarget;
 }
 
-// move the ship towards the target and stop when it reaches the target
+float calculateTargetAngle(b2Vec2 forwardDirection, b2Vec2 vectorToTarget) {
+    float targetAngle = atan2f(forwardDirection.x * vectorToTarget.y - forwardDirection.y * vectorToTarget.x, forwardDirection.x * vectorToTarget.x + forwardDirection.y * vectorToTarget.y);
+
+    // Normalize the angle to be between -pi and pi
+    if (targetAngle > M_PI) {
+        targetAngle -= 2.0f * M_PI;
+    } else if (targetAngle < -M_PI) {
+        targetAngle += 2.0f * M_PI;
+    }
+
+    return targetAngle;
+}
+
+void adjustMotorForces(Ship* ship, float targetAngle) {
+    if (targetAngle > 0.1f) {
+        ship->leftMotorForce = 0.0f;
+        ship->rightMotorForce = 1.0f;
+    } else if (targetAngle < -0.1f) {
+        ship->leftMotorForce = 1.0f;
+        ship->rightMotorForce = 0.0f;
+    } else {
+        ship->leftMotorForce = 1.0f;
+        ship->rightMotorForce = 1.0f;
+    }
+}
+
+void applyMotorForces(Ship* ship, b2BodyId bodyId, b2Vec2 position, b2Rot orientation) {
+    // Get the positions of the motors
+    b2Vec2 leftMotorPosition = add(position, rotate(ship->leftMotorPosition, orientation));
+    b2Vec2 rightMotorPosition = add(position, rotate(ship->rightMotorPosition, orientation));
+
+    printf("leftMotorPosition = %f, %f, rightMotorPosition = %f, %f, shipPosition = %f, %f\n", leftMotorPosition.x, leftMotorPosition.y, rightMotorPosition.x, rightMotorPosition.y, position.x, position.y);
+
+    // Apply the forces in the direction of the forward vector
+    b2Vec2 localForwardForce = {ship->leftMotorForce, 0};  // Forward force
+    b2Vec2 localBackwardForce = {ship->rightMotorForce, 0}; // Backward force
+
+    // Rotate the forces according to the ship's current rotation
+    b2Vec2 leftMotorForce = rotate(localForwardForce, orientation);
+    b2Vec2 rightMotorForce = rotate(localBackwardForce, orientation);
+
+    printf("leftMotorForce = %f, %f, rightMotorForce = %f, %f\n", leftMotorForce.x, leftMotorForce.y, rightMotorForce.x, rightMotorForce.y);
+
+    // Apply forces to the motors
+    b2Body_ApplyForce(bodyId, leftMotorForce, leftMotorPosition, false);
+    b2Body_ApplyForce(bodyId, rightMotorForce, rightMotorPosition, false);
+}
+
+
 void moveShipsToTarget(int numberOfShips, Ship* ships) {
     for (int i = 0; i < numberOfShips; i++) {
         Ship* ship = &ships[i];
         b2BodyId bodyId = ship->bodyId;
         
-        // get ship information
+        // Get ship information
         b2Vec2 position = b2Body_GetPosition(bodyId);
         b2Rot orientation = b2Body_GetRotation(bodyId);
-        b2Vec2 forwardDirection = {orientation.c, orientation.s};
+        float angle = b2Rot_GetAngle(orientation);
+        b2Vec2 forwardDirection = {cosf(angle), sinf(angle)};
 
-        // calculate the angle to the target
-        b2Vec2 targetVector = calculateVectorToTarget(ship);
-        float angleToTarget = atan2f(targetVector.y, targetVector.x) - atan2f(forwardDirection.y, forwardDirection.x);
-        if (angleToTarget > M_PI) angleToTarget -= 2.0f * M_PI;
-        if (angleToTarget < -M_PI) angleToTarget += 2.0f * M_PI;
+        // Calculate the vector to the target
+        b2Vec2 vectorToTarget = calculateVectorToTarget(ship);
+        
+        // Calculate the target angle
+        float targetAngle = calculateTargetAngle(forwardDirection, vectorToTarget);
 
-        float baseForce = 10.0f; // Adjust for forward thrust
-        float turnAdjustment = angleToTarget * 5.0f; // Proportional turning
+        // Adjust motor forces based on the target angle
+        adjustMotorForces(ship, targetAngle);
 
-        // make the ship only sail forwards
-
-        float leftForce = baseForce - turnAdjustment;
-        float rightForce = baseForce + turnAdjustment;
-
-        b2Vec2 leftForceVector = scale((targetVector), ship->leftMotorForce);
-        b2Vec2 rightForceVector = scale((targetVector), ship->rightMotorForce);
-
-
-        // Calculate motor positions in world space
-        b2Vec2 leftMotorWorldPosition = add(position, ship->leftMotorPosition);
-        b2Vec2 rightMotorWorldPosition = add(position, ship->rightMotorPosition);
-
-        // Apply the same force to both motors
-        b2Body_ApplyForce(bodyId, leftForceVector, leftMotorWorldPosition, true);
-        b2Body_ApplyForce(bodyId, rightForceVector, rightMotorWorldPosition, true);
+        // Apply forces to the motors
+        applyMotorForces(ship, bodyId, position, orientation);
     }
 }
 
-
-
-
-
-
-
-void moveShipsToTargetPID(int numberOfShips, Ship* ships, b2Vec2 target) {
-    static float previousError[100] = {0.0f}; // Per-ship error tracking
-    static float integral[100] = {0.0f};     // Per-ship integral tracking
-
-    float Kp = 1.0f;  // Proportional gain
-    float Ki = 0.1f;  // Integral gain
-    float Kd = 1.0f;  // Derivative gain
-    float brakingFactor = 1.5f; // Braking factor to counter velocity
-
-    for (int i = 0; i < numberOfShips; i++) {
-        b2BodyId bodyId = ships[i].bodyId;
-        b2Vec2 position = b2Body_GetPosition(bodyId);
-        b2Vec2 velocity = b2Body_GetLinearVelocity(bodyId);
-
-        // Calculate error (distance to target)
-        b2Vec2 direction = subtract(target, position);
-        float error = b2Length(direction);
-
-        // Stop if close enough to the target
-        if (error < 0.5f && b2Length(velocity) < 0.1f) {
-            b2Body_SetLinearVelocity(bodyId, (b2Vec2){0.0f, 0.0f});
-            continue;
-        }
-
-        // Normalize direction vector
-        if (error > 0.0f) {
-            direction = scale(direction, 1.0f / error);
-        }
-
-        // Proportional term
-        float proportional = Kp * error;
-
-        // Integral term
-        integral[i] += error;
-        float integralTerm = Ki * integral[i];
-
-        // Derivative term
-        float derivative = error - previousError[i];
-        float derivativeTerm = Kd * derivative;
-
-        // Total PID force
-        float forceMagnitude = proportional + integralTerm + derivativeTerm;
-
-        // Apply braking near the target
-        if (error < 5.0f) { // Braking zone
-            b2Vec2 brakingForce = scale(velocity, -brakingFactor); // Opposite to velocity
-            forceMagnitude = fminf(forceMagnitude, 10.0f); // Limit force magnitude for stability
-            b2Vec2 force = scale(direction, forceMagnitude);
-            force = add(force, brakingForce);
-            b2Body_ApplyForceToCenter(bodyId, force, true);
-        } else {
-            // Regular movement towards the target
-            b2Vec2 force = scale(direction, forceMagnitude);
-            b2Body_ApplyForceToCenter(bodyId, force, true);
-        }
-
-        // Update previous error
-        previousError[i] = error;
-    }
-}

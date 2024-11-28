@@ -61,6 +61,6 @@ b2Vec2 scale(b2Vec2 v, float scalar);
 
 b2Vec2 add(b2Vec2 a, b2Vec2 b);
 
-b2Vec2 rotate(b2Vec2 v, float angle);
+b2Vec2 rotate(b2Vec2 v, b2Rot rotation);
 
 #endif // DEFINITIONS_H

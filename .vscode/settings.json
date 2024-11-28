@@ -6,6 +6,7 @@
 		"definitions.h": "c",
 		"formationcalculator.h": "c",
 		"ships.h": "c",
-		"stdlib.h": "c"
+		"stdlib.h": "c",
+		"ctime": "cpp"
 	}
 }

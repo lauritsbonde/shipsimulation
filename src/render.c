@@ -2,7 +2,7 @@
 #include "definitions.h"
 
 void render_ship(SDL_Renderer *renderer, b2Vec2 position, b2Rot rotation, b2Vec2* points, Color color) {
-    // Calculate screen center position, flipping the y-axis
+    // Calculate screen center position
     float centerX = position.x * SCALE + WINDOW_WIDTH / 2;
     float centerY = WINDOW_HEIGHT / 2 - position.y * SCALE;
 
@@ -13,13 +13,13 @@ void render_ship(SDL_Renderer *renderer, b2Vec2 position, b2Rot rotation, b2Vec2
         float localX = points[i].x * SCALE;
         float localY = points[i].y * SCALE;
 
-        // Rotate around the center of the ship
-        float rotatedX = localX * rotation.c - localY * rotation.s;
-        float rotatedY = localX * rotation.s + localY * rotation.c;
+        // Rotate around the center of the ship with an additional 90° clockwise rotation
+        float rotatedX = localX * rotation.s - localY * rotation.c;
+        float rotatedY = localX * rotation.c + localY * rotation.s;
 
         // Translate to screen coordinates
         transformedPoints[i].x = centerX + rotatedX;
-        transformedPoints[i].y = centerY - rotatedY; // Flip y-axis
+        transformedPoints[i].y = centerY + rotatedY;
     }
 
     // Close the polygon loop
@@ -30,8 +30,46 @@ void render_ship(SDL_Renderer *renderer, b2Vec2 position, b2Rot rotation, b2Vec2
 
     // Draw the ship polygon
     SDL_RenderDrawLinesF(renderer, transformedPoints, NUMBER_OF_POINTS);
+
+    // Draw the ship's orientatiozn line
+    float orientationLineLength = 2.0f * SCALE;
+    SDL_FPoint orientationLine[2] = {
+        {centerX, centerY},
+        {centerX + rotation.c * orientationLineLength, centerY - rotation.s * orientationLineLength}
+    };
+    SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a * 0.75);
+    SDL_RenderDrawLinesF(renderer, orientationLine, 2);
 }
 
+void render_motors(Ship ship, SDL_Renderer* renderer) {
+    b2Vec2 position = b2Body_GetPosition(ship.bodyId);
+    b2Rot rotation = b2Body_GetRotation(ship.bodyId);
+
+    printf("rotation (%f, %f)\n", rotation.c, rotation.s);
+
+    // Calculate the position of the left motor
+    b2Vec2 leftMotorPosition = add(position, rotate(ship.leftMotorPosition, rotation));
+    // Calculate the position of the right motor
+    b2Vec2 rightMotorPosition = add(position, rotate(ship.rightMotorPosition, rotation));
+
+    printf("leftMotorPosition (%f, %f)\n", leftMotorPosition.x, leftMotorPosition.y);
+    printf("rightMotorPosition (%f, %f)\n", rightMotorPosition.x, rightMotorPosition.y);
+
+    // Convert motor positions to screen coordinates
+    float leftMotorX = leftMotorPosition.x * SCALE + WINDOW_WIDTH / 2;
+    float leftMotorY = WINDOW_HEIGHT / 2 - leftMotorPosition.y * SCALE;
+    float rightMotorX = rightMotorPosition.x * SCALE + WINDOW_WIDTH / 2;
+    float rightMotorY = WINDOW_HEIGHT / 2 - rightMotorPosition.y * SCALE;
+
+    // Set draw color for the motors
+    SDL_SetRenderDrawColor(renderer, ship.color.r, ship.color.g, ship.color.b, ship.color.a);
+
+    // Draw the motors as small rectangles or points
+    SDL_Rect leftMotorRect = {leftMotorX - 2, leftMotorY - 2, 4, 4};
+    SDL_Rect rightMotorRect = {rightMotorX - 2, rightMotorY - 2, 4, 4};
+    SDL_RenderFillRect(renderer, &leftMotorRect);
+    SDL_RenderFillRect(renderer, &rightMotorRect);
+}
 
 void render_target(Ship ship, SDL_Renderer* renderer){
     Color color = ship.color;
@@ -43,7 +81,8 @@ void renderShips(int numberOfShips, Ship* ships, SDL_Renderer* renderer) {
     for (int i = 0; i < numberOfShips; i++) {
         b2Vec2 position = b2Body_GetPosition(ships[i].bodyId);
         b2Rot rotation = b2Body_GetRotation(ships[i].bodyId);
-        // render_ship(renderer, position, rotation, ships[i].points, ships[i].color);
+        render_ship(renderer, position, rotation, ships[i].points, ships[i].color);
+        render_motors(ships[i], renderer);
         render_target(ships[i], renderer);
     }
 }

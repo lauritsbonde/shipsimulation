@@ -2,13 +2,13 @@
 
 const int WINDOW_WIDTH = 1920/2;
 const int WINDOW_HEIGHT = 1080/2;
-const float SCALE = 20.0f; 
+const float SCALE = 20.0f/2; 
 const int NUMBER_OF_POINTS = 7;
 
 const float HALF_BOX_WIDTH = 35.0f;
 const float HALF_BOX_HEIGHT = 25.0f;
 
-const int numberOfShips = 66;
+const int numberOfShips = 2;
 
 b2Vec2 shipPoints[] = {
     {0.0f, 1.0f},   // Top point (elongated)
@@ -43,13 +43,10 @@ b2Vec2 add(b2Vec2 a, b2Vec2 b) {
     return result;
 }
 
-b2Vec2 rotate(b2Vec2 v, float angle) {
-    float cosAngle = cosf(angle);
-    float sinAngle = sinf(angle);
-
+b2Vec2 rotate(b2Vec2 point, b2Rot rotation) {
     return (b2Vec2){
-        .x = v.x * cosAngle - v.y * sinAngle,
-        .y = v.x * sinAngle + v.y * cosAngle
+        point.x * rotation.c - point.y * rotation.s,
+        point.x * rotation.s + point.y * rotation.c
     };
 }
 

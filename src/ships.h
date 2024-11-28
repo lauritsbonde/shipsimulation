@@ -11,6 +11,4 @@
 void createShips(b2WorldId worldId, int numberOfShips, Ship* ships);
 void moveShipsToTarget(int numberOfShips, Ship* ships);
 
-void moveShipsToTargetPID(int numberOfShips, Ship* ships, b2Vec2 target);
-
 #endif // SHIPS_H
