@@ -104,7 +104,7 @@ int main() {
         b2World_Step(worldId, timeStep, subStepCount);
 
         // Render - Clear screen
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
         SDL_RenderClear(renderer);
 
         SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
@@ -114,7 +114,7 @@ int main() {
         render_box(renderer, (b2Vec2){0.0f, 0.0f}, (b2Rot){1.0f, 0.0f}, HALF_BOX_WIDTH, HALF_BOX_HEIGHT, boundaryColor);
 
         // Move boxes to target
-        moveShipsToTarget(numberOfShips, ships);
+        moveShipsToTarget(numberOfShips, ships, timeStep);
 
         // render ships
         renderShips(numberOfShips, ships, renderer);

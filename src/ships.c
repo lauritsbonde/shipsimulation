@@ -1,5 +1,14 @@
 #include "ships.h"
 
+#define MAX_DISTANCE 100.0f  
+#define DAMPING_FACTOR 0.9f  
+#define MAX_FORCE 10.0f  
+
+#define BRAKING_DISTANCE 10.0f  
+#define BREAKING_FORCE 0.30f
+
+#define TARGET_TOLERANCE 2.0f
+
 Ship createShip(b2WorldId worldId, b2Vec2 position) {
     Ship ship;
 
@@ -49,6 +58,13 @@ Ship createShip(b2WorldId worldId, b2Vec2 position) {
     // Set target and target orientation
     ship.targetOrientation = (b2Rot){0.0f, 1.0f};
 
+    // Initialize PID controller parameters
+    ship.pidController.Kp = 1.0f; // Proportional gain - higher values for faster response
+    ship.pidController.Ki = 0.50f; // Integral gain - higher value for less steady state error
+    ship.pidController.Kd = 0.95f; // Derivative gain - higher value for less overshoot
+    ship.pidController.integral = 0.0f;
+    ship.pidController.previousError = 0.0f;
+
     return ship;
 }
 
@@ -82,13 +98,6 @@ b2Vec2 calculateVectorToTarget(Ship* ship) {
         .y = targetPosition.y - currentPosition.y
     };
 
-    // Normalize the vector to get the direction only
-    float length = sqrtf(vectorToTarget.x * vectorToTarget.x + vectorToTarget.y * vectorToTarget.y);
-    if (length > 0.0f) {
-        vectorToTarget.x /= length;
-        vectorToTarget.y /= length;
-    }
-
     return vectorToTarget;
 }
 
@@ -105,16 +114,97 @@ float calculateTargetAngle(b2Vec2 forwardDirection, b2Vec2 vectorToTarget) {
     return targetAngle;
 }
 
-void adjustMotorForces(Ship* ship, float targetAngle) {
-    if (targetAngle > 0.1f) {
+bool checkAndApplyBraking(Ship* ship, float deltaTime, b2Vec2 vectorToTarget) {
+    float distanceToTarget = b2Length(vectorToTarget);
+
+    // Check if the ship is within the stopping tolerance
+    if (distanceToTarget < TARGET_TOLERANCE) {
+        printf("Stopping at target\n");
+
+         // Get the ship's current velocity
+        b2BodyId bodyId = ship->bodyId;
+        b2Vec2 velocity = b2Body_GetLinearVelocity(bodyId);
+        float velocityLength = b2Length(velocity);
+
+        // reverse the forces hard if it has velocity
+        if(velocityLength > 0.1f) {
+            ship->leftMotorForce = -MAX_FORCE;
+            ship->rightMotorForce = -MAX_FORCE;
+        } else {
+            ship->leftMotorForce = 0.0f;
+            ship->rightMotorForce = 0.0f;
+        }
+
+        return true;
+    }
+
+    // Check if the ship is within the braking distance
+    if (distanceToTarget < BRAKING_DISTANCE) {
+        printf("Braking\n");
+
+        // Get the ship's current velocity
+        b2BodyId bodyId = ship->bodyId;
+        b2Vec2 velocity = b2Body_GetLinearVelocity(bodyId);
+        float velocityLength = b2Length(velocity);
+
+        // Normalize the velocity
+        float normalizedVelocity = fminf(velocityLength / MAX_FORCE, 1.0f);
+
+        // Calculate the braking force
+        float brakingForce = BREAKING_FORCE * normalizedVelocity * (distanceToTarget / BRAKING_DISTANCE);
+
+        // Apply the braking force to the motors
+        ship->leftMotorForce = -brakingForce;
+        ship->rightMotorForce = -brakingForce;
+
+        printf("Braking force: %f\n", brakingForce);
+
+        return true;
+    }
+
+    return false;
+}
+
+
+void adjustMotorForces(Ship* ship, float targetAngle, float deltaTime, float targetDistance) {
+    PIDController* pid = &ship->pidController;
+
+    // Calculate the error
+    float error = targetAngle;
+
+    // Calculate the integral
+    pid->integral += error * deltaTime;
+
+    // Retrieve the ship's angular velocity
+    float angularVelocity = b2Body_GetAngularVelocity(ship->bodyId);
+
+    // Calculate the derivative
+    float derivative = (error - pid->previousError) / deltaTime - angularVelocity;
+
+    // Calculate the control output
+    float output = pid->Kp * error + pid->Ki * pid->integral + pid->Kd * derivative;
+
+    // Update the previous error
+    pid->previousError = error;
+
+    // Normalize the target distance
+    float normalizedDistance = fminf(targetDistance / MAX_DISTANCE, MAX_FORCE);
+
+    // Adjust motor forces based on the control output and normalized target distance
+    float force = normalizedDistance * DAMPING_FACTOR; // Apply damping factor
+
+    // Clamp the force to the maximum force value
+    force = fminf(force, MAX_FORCE);
+
+    if (output > 0.1f) {
         ship->leftMotorForce = 0.0f;
-        ship->rightMotorForce = 1.0f;
-    } else if (targetAngle < -0.1f) {
-        ship->leftMotorForce = 1.0f;
+        ship->rightMotorForce = force;
+    } else if (output < -0.1f) {
+        ship->leftMotorForce = force;
         ship->rightMotorForce = 0.0f;
     } else {
-        ship->leftMotorForce = 1.0f;
-        ship->rightMotorForce = 1.0f;
+        ship->leftMotorForce = force;
+        ship->rightMotorForce = force;
     }
 }
 
@@ -122,8 +212,6 @@ void applyMotorForces(Ship* ship, b2BodyId bodyId, b2Vec2 position, b2Rot orient
     // Get the positions of the motors
     b2Vec2 leftMotorPosition = add(position, rotate(ship->leftMotorPosition, orientation));
     b2Vec2 rightMotorPosition = add(position, rotate(ship->rightMotorPosition, orientation));
-
-    printf("leftMotorPosition = %f, %f, rightMotorPosition = %f, %f, shipPosition = %f, %f\n", leftMotorPosition.x, leftMotorPosition.y, rightMotorPosition.x, rightMotorPosition.y, position.x, position.y);
 
     // Apply the forces in the direction of the forward vector
     b2Vec2 localForwardForce = {ship->leftMotorForce, 0};  // Forward force
@@ -133,15 +221,13 @@ void applyMotorForces(Ship* ship, b2BodyId bodyId, b2Vec2 position, b2Rot orient
     b2Vec2 leftMotorForce = rotate(localForwardForce, orientation);
     b2Vec2 rightMotorForce = rotate(localBackwardForce, orientation);
 
-    printf("leftMotorForce = %f, %f, rightMotorForce = %f, %f\n", leftMotorForce.x, leftMotorForce.y, rightMotorForce.x, rightMotorForce.y);
-
     // Apply forces to the motors
     b2Body_ApplyForce(bodyId, leftMotorForce, leftMotorPosition, false);
     b2Body_ApplyForce(bodyId, rightMotorForce, rightMotorPosition, false);
 }
 
 
-void moveShipsToTarget(int numberOfShips, Ship* ships) {
+void moveShipsToTarget(int numberOfShips, Ship* ships, float deltaTime) {
     for (int i = 0; i < numberOfShips; i++) {
         Ship* ship = &ships[i];
         b2BodyId bodyId = ship->bodyId;
@@ -155,14 +241,19 @@ void moveShipsToTarget(int numberOfShips, Ship* ships) {
         // Calculate the vector to the target
         b2Vec2 vectorToTarget = calculateVectorToTarget(ship);
         
-        // Calculate the target angle
-        float targetAngle = calculateTargetAngle(forwardDirection, vectorToTarget);
+        // Check if braking or stopping is required
+        bool braking = checkAndApplyBraking(ship, deltaTime, vectorToTarget);
+        if (!braking) {
+            // Calculate the target angle
+            float targetAngle = calculateTargetAngle(forwardDirection, vectorToTarget);
 
-        // Adjust motor forces based on the target angle
-        adjustMotorForces(ship, targetAngle);
+            // Adjust motor forces based on the target angle
+            adjustMotorForces(ship, targetAngle, deltaTime, b2Length(vectorToTarget));
+        }
 
         // Apply forces to the motors
         applyMotorForces(ship, bodyId, position, orientation);
     }
 }
+
 

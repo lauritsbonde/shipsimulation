@@ -9,6 +9,6 @@
 #include "definitions.h"
 
 void createShips(b2WorldId worldId, int numberOfShips, Ship* ships);
-void moveShipsToTarget(int numberOfShips, Ship* ships);
+void moveShipsToTarget(int numberOfShips, Ship* ships, float deltaTime);
 
 #endif // SHIPS_H

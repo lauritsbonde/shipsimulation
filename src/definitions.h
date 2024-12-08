@@ -31,6 +31,15 @@ typedef struct {
     uint8_t a;
 } Color;
 
+// Struct for holding PID controller data
+typedef struct {
+    float Kp;
+    float Ki;
+    float Kd;
+    float integral;
+    float previousError;
+} PIDController;
+
 
 typedef struct {
     b2BodyId bodyId;
@@ -50,6 +59,8 @@ typedef struct {
     b2Rot targetOrientation;  // Target orientation
 
     Color color;              // Ship's color
+
+    PIDController pidController; // PID controller for the ship
 } Ship;
 
 

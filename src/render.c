@@ -37,7 +37,7 @@ void render_ship(SDL_Renderer *renderer, b2Vec2 position, b2Rot rotation, b2Vec2
         {centerX, centerY},
         {centerX + rotation.c * orientationLineLength, centerY - rotation.s * orientationLineLength}
     };
-    SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a * 0.75);
+    SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a * 0.95);
     SDL_RenderDrawLinesF(renderer, orientationLine, 2);
 }
 
@@ -45,15 +45,10 @@ void render_motors(Ship ship, SDL_Renderer* renderer) {
     b2Vec2 position = b2Body_GetPosition(ship.bodyId);
     b2Rot rotation = b2Body_GetRotation(ship.bodyId);
 
-    printf("rotation (%f, %f)\n", rotation.c, rotation.s);
-
     // Calculate the position of the left motor
     b2Vec2 leftMotorPosition = add(position, rotate(ship.leftMotorPosition, rotation));
     // Calculate the position of the right motor
     b2Vec2 rightMotorPosition = add(position, rotate(ship.rightMotorPosition, rotation));
-
-    printf("leftMotorPosition (%f, %f)\n", leftMotorPosition.x, leftMotorPosition.y);
-    printf("rightMotorPosition (%f, %f)\n", rightMotorPosition.x, rightMotorPosition.y);
 
     // Convert motor positions to screen coordinates
     float leftMotorX = leftMotorPosition.x * SCALE + WINDOW_WIDTH / 2;
