@@ -15,7 +15,8 @@ This is a program to simulate our ships for our Research Project: `Applying swar
 ## How to run
 
 1. Clone the repository
-2. Build the box2d library
+2. Run the command: `git submodule update --init --recursive`
+3. Build the box2d library
 
     ```bash
     cd box2d
@@ -23,7 +24,7 @@ This is a program to simulate our ships for our Research Project: `Applying swar
     cd ..
     ```
 
-3. Run:
+4. Run:
 
     ```bash
     make
@@ -34,4 +35,4 @@ This is a program to simulate our ships for our Research Project: `Applying swar
     make rerun
     ```
 
-4. Enjoy!
+5. Enjoy!
